@@ -19,5 +19,12 @@
   "author": {
     "name": "Mario Yang",
     "email": "cy546@cornell.edu"
-  }
+  },
+  "samples": [
+    {
+      "displayName": "StrangeLand Core Samples",
+      "description": "Contains prefabs, scenes, and resources to demonstrate the core features.",
+      "path": "Samples~"
+    }
+  ]
 }
