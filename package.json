@@ -2,7 +2,7 @@
   "name": "com.strangeland.core",
   "version": "1.0.0",
   "displayName": "StrangeLand Core",
-  "description": "Networking and scene management framework for multiplayer Unity applications",
+  "description": "A flexible framework for building multiplayer research experiments in Unity. Manages networking, scene-based scenarios, participant roles, and data logging.",
   "unity": "6000.0",
   "unityRelease": "51f1",
   "dependencies": {
