@@ -22,9 +22,9 @@
   },
   "samples": [
     {
-      "displayName": "StrangeLand Core Samples",
-      "description": "Contains prefabs, scenes, and resources to demonstrate the core features.",
-      "path": "Samples~"
+      "displayName": "Core Prefabs and Templates",
+      "description": "Contains essential prefabs and resources intended to be modified for your project. You must import them for the system to work!",
+      "path": "Templates~"
     }
   ]
 }
