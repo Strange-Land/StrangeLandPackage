@@ -14,11 +14,11 @@
     "networking",
     "multiplayer",
     "scene management",
+    "HCI Research",
     "strangeland"
   ],
   "author": {
-    "name": "Mario Yang",
-    "email": "cy546@cornell.edu"
+    "name": "StrangeLand Team"
   },
   "samples": [
     {
