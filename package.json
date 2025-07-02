@@ -1,0 +1,23 @@
+{
+  "name": "com.strangeland.core",
+  "version": "1.0.0",
+  "displayName": "StrangeLand Core",
+  "description": "Networking and scene management framework for multiplayer Unity applications",
+  "unity": "6000.0",
+  "unityRelease": "51f1",
+  "dependencies": {
+    "com.unity.netcode.gameobjects": "2.4.3",
+    "com.unity.multiplayer.playmode": "1.4.2",
+    "com.unity.inputsystem": "1.14.0"
+  },
+  "keywords": [
+    "networking",
+    "multiplayer",
+    "scene management",
+    "strangeland"
+  ],
+  "author": {
+    "name": "Mario Yang",
+    "email": "cy546@cornell.edu"
+  }
+}
