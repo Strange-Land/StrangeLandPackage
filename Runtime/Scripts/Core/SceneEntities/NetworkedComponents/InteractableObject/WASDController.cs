@@ -1,6 +1,7 @@
 using System;
 using Core.Networking;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Core.SceneEntities.NetworkedComponents
 {
@@ -64,9 +65,9 @@ namespace Core.SceneEntities.NetworkedComponents
 
         private void HandleRotation()
         {
-            if (Input.GetMouseButton(1))
+            if (Mouse.current != null && Mouse.current.rightButton.isPressed)
             {
-                float mouseX = Input.GetAxis("Mouse X");
+                float mouseX = Mouse.current.delta.x.ReadValue();
                 transform.Rotate(Vector3.up, mouseX * rotationSpeed * Time.deltaTime);
             }
         }
@@ -76,10 +77,13 @@ namespace Core.SceneEntities.NetworkedComponents
             float horizontalInput = 0f;
             float verticalInput = 0f;
 
-            if (Input.GetKey(KeyCode.W)) verticalInput = 1f;
-            if (Input.GetKey(KeyCode.S)) verticalInput = -1f;
-            if (Input.GetKey(KeyCode.A)) horizontalInput = -1f;
-            if (Input.GetKey(KeyCode.D)) horizontalInput = 1f;
+            if (Keyboard.current != null)
+            {
+                if (Keyboard.current.wKey.isPressed) verticalInput = 1f;
+                if (Keyboard.current.sKey.isPressed) verticalInput = -1f;
+                if (Keyboard.current.aKey.isPressed) horizontalInput = -1f;
+                if (Keyboard.current.dKey.isPressed) horizontalInput = 1f;
+            }
 
             Vector3 moveDirection = (transform.forward * verticalInput + transform.right * horizontalInput).normalized;
 
@@ -89,7 +93,7 @@ namespace Core.SceneEntities.NetworkedComponents
                 velocity.y = rb.linearVelocity.y;
                 rb.linearVelocity = velocity;
 
-                if (Input.GetKeyDown(KeyCode.Space))
+                if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
                 {
                     Jump();
                 }
