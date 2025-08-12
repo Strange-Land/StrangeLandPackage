@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Core.SceneEntities
 {
@@ -36,10 +37,20 @@ namespace Core.SceneEntities
         void Move()
         {
             float currentSpeed = moveSpeed;
-            if (Input.GetKey(KeyCode.LeftShift)) currentSpeed *= speedMultiplier;
 
-            float h = Input.GetAxis("Horizontal");
-            float v = Input.GetAxis("Vertical");
+            if (Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed)
+                currentSpeed *= speedMultiplier;
+
+            float h = 0f;
+            float v = 0f;
+
+            if (Keyboard.current != null)
+            {
+                if (Keyboard.current.aKey.isPressed) h = -1f;
+                if (Keyboard.current.dKey.isPressed) h = 1f;
+                if (Keyboard.current.wKey.isPressed) v = 1f;
+                if (Keyboard.current.sKey.isPressed) v = -1f;
+            }
 
             Vector3 right = transform.right;
             right.y = 0f;
@@ -53,8 +64,8 @@ namespace Core.SceneEntities
             Vector3 move = direction * currentSpeed * Time.deltaTime;
 
             float up = 0f;
-            if (Input.GetKey(KeyCode.Space)) up += 1f;
-            if (Input.GetKey(KeyCode.LeftControl)) up -= 1f;
+            if (Keyboard.current != null && Keyboard.current.spaceKey.isPressed) up += 1f;
+            if (Keyboard.current != null && Keyboard.current.leftCtrlKey.isPressed) up -= 1f;
             move += Vector3.up * up * currentSpeed * Time.deltaTime;
 
             transform.position += move;
@@ -62,10 +73,10 @@ namespace Core.SceneEntities
 
         void Look()
         {
-            if (Input.GetMouseButton(1))
+            if (Mouse.current != null && Mouse.current.rightButton.isPressed)
             {
-                float mouseX = Input.GetAxis("Mouse X") * rotationSpeed;
-                float mouseY = Input.GetAxis("Mouse Y") * rotationSpeed;
+                float mouseX = Mouse.current.delta.x.ReadValue() * rotationSpeed * Time.deltaTime;
+                float mouseY = Mouse.current.delta.y.ReadValue() * rotationSpeed * Time.deltaTime;
 
                 _yaw += mouseX;
                 _pitch -= mouseY;
@@ -78,16 +89,17 @@ namespace Core.SceneEntities
         void Zoom()
         {
             float currentZoomSpeed = zoomSpeed;
-            if (Input.GetKey(KeyCode.LeftShift)) currentZoomSpeed *= zoomMultiplier;
+            if (Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed)
+                currentZoomSpeed *= zoomMultiplier;
 
-            float scroll = Input.GetAxis("Mouse ScrollWheel");
+            float scroll = Mouse.current != null ? Mouse.current.scroll.ReadValue().y : 0f;
             if (Mathf.Abs(scroll) > 0.01f)
             {
                 Camera cam = GetComponent<Camera>();
                 if (cam)
                 {
                     float fov = cam.fieldOfView;
-                    fov -= scroll * currentZoomSpeed;
+                    fov -= scroll * currentZoomSpeed * Time.deltaTime;
                     fov = Mathf.Clamp(fov, minFOV, maxFOV);
                     cam.fieldOfView = fov;
                 }
