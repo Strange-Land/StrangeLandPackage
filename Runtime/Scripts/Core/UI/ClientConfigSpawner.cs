@@ -36,10 +36,9 @@ namespace Core.UI
                 ui.ClientDisplayDropdown.value = option.ClientDisplay;
                 ui.ClientDisplayDropdown.RefreshShownValue();
 
-                var objNames = new List<string> { "None" };
-                objNames.AddRange(InteractableObjectsSO.Instance.InteractableObjects
+                var objNames = InteractableObjectsSO.Instance.InteractableObjects
                     .Select(io => io.ID)
-                    .ToList());
+                    .ToList();
 
                 ui.SpawnTypeDropdown.ClearOptions();
                 ui.SpawnTypeDropdown.AddOptions(objNames);
