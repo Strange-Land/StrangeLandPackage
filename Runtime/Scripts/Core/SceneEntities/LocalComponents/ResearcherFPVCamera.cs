@@ -3,7 +3,7 @@ using UnityEngine.InputSystem;
 
 namespace Core.SceneEntities
 {
-    public class FreeCameraController : MonoBehaviour
+    public class ResearcherFPVCamera : MonoBehaviour
     {
         public float moveSpeed = 10f;
         public float speedMultiplier = 2f;
