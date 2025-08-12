@@ -356,7 +356,7 @@ namespace Core.Networking
                 return;
             }
 
-            if (GameObject.FindFirstObjectByType<FreeCameraController>() != null && NetworkManager.Singleton.LocalClientId == clientRpcParams.Send.TargetClientIds[0])
+            if (GameObject.FindFirstObjectByType<ResearcherFPVCamera>() != null && NetworkManager.Singleton.LocalClientId == clientRpcParams.Send.TargetClientIds[0])
             {
                 Debug.LogWarning($"Researcher camera already exists for client {NetworkManager.Singleton.LocalClientId}. Skipping spawn.");
                 return;
