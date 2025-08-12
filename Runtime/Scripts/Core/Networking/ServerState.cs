@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.InputSystem;
 
 namespace Core.Networking
 {
@@ -153,7 +154,7 @@ namespace Core.Networking
 
         public void UpdateState(ConnectionAndSpawning context)
         {
-            if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.I))
+            if (Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed && Keyboard.current.iKey.wasPressedThisFrame)
             {
                 context.SwitchToState(new Interact());
             }
@@ -176,7 +177,7 @@ namespace Core.Networking
 
         public void UpdateState(ConnectionAndSpawning context)
         {
-            if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.Q))
+            if (Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed && Keyboard.current.qKey.wasPressedThisFrame)
             {
                 context.SwitchToState(new Questions());
             }
