@@ -183,32 +183,8 @@ namespace Core.Networking
                     LoadEventCompleted(sceneEvent);
                     break;
                 case SceneEventType.LoadComplete:
-                    if (sceneEvent.ClientId == NetworkManager.ServerClientId)
-                    {
-                        ScenarioManager sm = GetScenarioManager();
-                        if (sm == null || !sm.IsInitialized)
-                        {
-                            // Debug.LogWarning($"ScenarioManager not ready when server completed scene load: {sceneEvent.SceneName}. Waiting for it to initialize.");
-                            StartCoroutine(WaitForScenarioManagerAndThenSpawn(sceneEvent));
-                            return;
-                        }
-
-                        if (sceneEvent.LoadSceneMode == LoadSceneMode.Additive && sm.HasVisualScene() ||
-                           (sceneEvent.LoadSceneMode == LoadSceneMode.Single && !sm.HasVisualScene()))
-                        {
-                            foreach (var connectedClientId in NetworkManager.Singleton.ConnectedClientsIds)
-                            {
-                                if (sceneEvent.ClientId == connectedClientId)
-                                {
-                                    ParticipantOrder po = Participants.GetPO(connectedClientId);
-                                    if (po != ParticipantOrder.Researcher && !POToInteractableObjects.ContainsKey(po))
-                                    {
-                                        StartCoroutine(EnsureClientDisplayAndSpawnInteractable(connectedClientId, po));
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    Debug.Log($"ClientID {sceneEvent.ClientId}, serverclientId {NetworkManager.ServerClientId}");
+                    StartCoroutine(WaitForScenarioManagerAndThenSpawn(sceneEvent));
                     break;
             }
         }
@@ -216,6 +192,7 @@ namespace Core.Networking
 
         private IEnumerator EnsureClientDisplayAndSpawnInteractable(ulong clientId, ParticipantOrder po)
         {
+            Debug.Log($"Ensure::: Client {clientId} (PO: {po})");
             yield return new WaitUntil(() => POToClientDisplay.ContainsKey(po) && POToClientDisplay[po] != null);
             SpawnInteractableObject(clientId);
         }
@@ -416,6 +393,7 @@ namespace Core.Networking
             }
 
             GameObject interactableInstance = Instantiate(interactablePrefab, pose.position, pose.rotation);
+            Debug.Log($"Spawned InteractableObject {interactableInstance.name} for PO: {po} with ClientId: {clientId}");
             NetworkObject netObj = interactableInstance.GetComponent<NetworkObject>();
             if (netObj == null)
             {
@@ -490,6 +468,11 @@ namespace Core.Networking
                 {
                     Debug.Log($"Instantiated local researcher prefab: {prefab.name}");
                 }
+            }
+
+            if (NetworkManager.Singleton.IsServer)
+            {
+                Instantiate(_config.ResearcherCameraPrefab);
             }
         }
 
