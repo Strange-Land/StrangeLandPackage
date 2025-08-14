@@ -14,7 +14,7 @@ namespace Core.Networking
         [SerializeField] private List<RuntimePlatform> _VRPlatforms;
 
         [Tooltip("Use Platform for builds, use PlayModeTag for editor (multiplayer center)")]
-        [SerializeField] private StartupMode _startupMode;
+        private StartupMode _startupMode;
         private string[] _playModeTags;
 
         private enum StartupMode

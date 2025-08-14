@@ -1,3 +1,5 @@
+# if UNITY_EDITOR
+
 using Core.SceneEntities;
 using Unity.Netcode.Components;
 using UnityEditor;
@@ -166,3 +168,5 @@ namespace Core.Editor
         }
     }
 }
+
+# endif

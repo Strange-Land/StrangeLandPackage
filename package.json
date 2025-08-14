@@ -26,5 +26,12 @@
       "description": "Contains essential prefabs and resources intended to be modified for your project. You must import them for the system to work!",
       "path": "Templates~"
     }
+  ],
+  "VR": [
+    {
+      "displayName": "Meta VR Support",
+      "description": "Please import meta sdk, then replace the placeholder VR prefab with the supplied prefab",
+      "path": "Sample_VR~"
+    }
   ]
 }

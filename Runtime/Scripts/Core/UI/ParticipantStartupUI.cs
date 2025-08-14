@@ -12,6 +12,7 @@ namespace Core.UI
     {
         public TMP_Dropdown PODropdown;
         public TMP_Dropdown LanguageDropdown;
+        public TMP_InputField IPInputField;
         
         private JoinParameters _joinParameters;
         
@@ -43,6 +44,7 @@ namespace Core.UI
             
             var jsonString = JsonConvert.SerializeObject(_joinParameters);
             NetworkManager.Singleton.NetworkConfig.ConnectionData = Encoding.ASCII.GetBytes(jsonString);
+            
             
             ConnectionAndSpawning.Instance.StartAsClient();
         }
