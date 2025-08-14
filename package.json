@@ -1,6 +1,6 @@
 {
   "name": "com.strangeland.core",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "displayName": "StrangeLand Core",
   "description": "A flexible framework for building multiplayer research experiments in Unity. Manages networking, scene-based scenarios, participant roles, and data logging.",
   "unity": "6000.0",
@@ -25,10 +25,8 @@
       "displayName": "Core Prefabs and Templates",
       "description": "Contains essential prefabs and resources intended to be modified for your project. You must import them for the system to work!",
       "path": "Templates~"
-    }
-  ],
-  "VR": [
-    {
+    },
+        {
       "displayName": "Meta VR Support",
       "description": "Please import meta sdk, then replace the placeholder VR prefab with the supplied prefab",
       "path": "Sample_VR~"
