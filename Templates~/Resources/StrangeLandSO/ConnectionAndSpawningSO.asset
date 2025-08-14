@@ -13,7 +13,6 @@ MonoBehaviour:
   m_Name: ConnectionAndSpawningSO
   m_EditorClassIdentifier: 
   ResearcherPrefabs:
-  - {fileID: 6949794861440479549, guid: 666692c767b3dec4ebf56a2e2caccc40, type: 3}
   - {fileID: 435767235896549270, guid: a21133e0020f17b4d88e91d7157f34ac, type: 3}
   ResearcherCameraPrefab: {fileID: 6949794861440479549, guid: 666692c767b3dec4ebf56a2e2caccc40, type: 3}
   WaitingRoomScene:
@@ -24,6 +23,7 @@ MonoBehaviour:
   - sceneAsset: {fileID: 102900000, guid: 94efa062ec163de4e99773a164aa0670, type: 3}
     required: 0
     buildIndex: 2
-  - sceneAsset: {fileID: 102900000, guid: 61a337cb6fa5f884d8fbc37e977604a2, type: 3}
-    required: 0
-    buildIndex: 3
+  PCStartupPrefab: {fileID: 3428880296775238896, guid: 0d15872ef92f0674aa679cddee18d561, type: 3}
+  VRStartupPrefab: {fileID: 3428880296775238896, guid: 5574fc8a2298bc541ae63ed89e19802a, type: 3}
+  PCPlatforms: 02000000010000000d000000
+  VRPlatforms: 0b000000

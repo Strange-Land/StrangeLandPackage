@@ -10,5 +10,11 @@ namespace Core.Networking
         public GameObject ResearcherCameraPrefab;
         public SceneField WaitingRoomScene;
         public List<SceneField> ScenarioScenes = new List<SceneField>();
+        
+        public GameObject PCStartupPrefab;
+        public GameObject VRStartupPrefab;
+
+        public List<RuntimePlatform> PCPlatforms;
+        public List<RuntimePlatform> VRPlatforms;
     }
 }

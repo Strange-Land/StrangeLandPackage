@@ -7,15 +7,11 @@ namespace Core.Networking
 {
     public class StartupManager : MonoBehaviour
     {
-        [SerializeField] private GameObject _PCStartupPrefab;
-        [SerializeField] private GameObject _VRStartupPrefab;
-
-        [SerializeField] private List<RuntimePlatform> _PCPlatforms;
-        [SerializeField] private List<RuntimePlatform> _VRPlatforms;
-
         [Tooltip("Use Platform for builds, use PlayModeTag for editor (multiplayer center)")]
         private StartupMode _startupMode;
         private string[] _playModeTags;
+
+        private ConnectionAndSpawningSO _connectionAndSpawningSO => ConnectionAndSpawningSO.Instance;
 
         private enum StartupMode
         {
@@ -66,11 +62,11 @@ namespace Core.Networking
 
         private void PlatformStartup()
         {
-            if (_PCPlatforms.Contains(Application.platform))
+            if (_connectionAndSpawningSO.PCPlatforms.Contains(Application.platform))
             {
                 StartPCStartup();
             }
-            else if (_VRPlatforms.Contains(Application.platform))
+            else if (_connectionAndSpawningSO.VRPlatforms.Contains(Application.platform))
             {
                 StartVRStartup();
             }
@@ -82,13 +78,13 @@ namespace Core.Networking
 
         private void StartPCStartup()
         {
-            Instantiate(_PCStartupPrefab);
+            Instantiate(_connectionAndSpawningSO.PCStartupPrefab);
             Destroy(this);
         }
 
         private void StartVRStartup()
         {
-            Instantiate(_VRStartupPrefab);
+            Instantiate(_connectionAndSpawningSO.VRStartupPrefab);
             Destroy(this);
         }
     }

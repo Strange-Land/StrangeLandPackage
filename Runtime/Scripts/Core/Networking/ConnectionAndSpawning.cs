@@ -107,6 +107,8 @@ namespace Core.Networking
             var jsonString = JsonConvert.SerializeObject(joinParams);
             NetworkManager.Singleton.NetworkConfig.ConnectionData = Encoding.ASCII.GetBytes(jsonString);
 
+            Debug.Log($"starting client: ip: {NetworkManager.Singleton.GetComponent<UnityTransport>().ConnectionData.Address}");
+            
             NetworkManager.Singleton.StartClient();
         }
 
