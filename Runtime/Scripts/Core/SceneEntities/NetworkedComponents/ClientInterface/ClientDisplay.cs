@@ -9,13 +9,14 @@ namespace Core.SceneEntities
 {
     public abstract class ClientDisplay : NetworkBehaviour
     {
-
         private NetworkVariable<ParticipantOrder> _participantOrder = new NetworkVariable<ParticipantOrder>();
 
         public InteractableObject MyInteractableObject;
 
-        private static List<ClientDisplay> instances = new List<ClientDisplay>(); // Can cause memory leakage if not kept clean...!!! 
+        private static List<ClientDisplay> instances = new List<ClientDisplay>();
         public static IReadOnlyList<ClientDisplay> Instances => instances.AsReadOnly();
+
+        private Action<bool> serverCalibrationCallback;
 
         private void Awake()
         {
@@ -29,10 +30,6 @@ namespace Core.SceneEntities
 
         public override void OnNetworkSpawn()
         {
-            /* I know we originally do it in inherited classes
-        but at least for camera and audio listener they should be generic 
-        the inherited classes just need to remember do base.OnNetworkSpawn()
-        */
             if (!IsLocalPlayer)
             {
                 foreach (var c in GetComponentsInChildren<Camera>())
@@ -49,7 +46,6 @@ namespace Core.SceneEntities
                 {
                     e.enabled = false;
                 }
-
             }
             else
             {
@@ -61,9 +57,64 @@ namespace Core.SceneEntities
         {
             _participantOrder.Value = _ParticipantOrder;
         }
+
         public ParticipantOrder GetParticipantOrder()
         {
             return _participantOrder.Value;
+        }
+
+        public void RequestCalibration(Action<bool> callback)
+        {
+            if (!IsServer)
+            {
+                Debug.LogError("RequestCalibration can only be called on the server");
+                callback?.Invoke(false);
+                return;
+            }
+
+            var clientOption = ClientOptions.Instance.GetOption(GetParticipantOrder());
+            if (clientOption.ClientDisplay < 0 || clientOption.ClientDisplay >= ClientDisplaysSO.Instance.ClientDisplays.Count)
+            {
+                Debug.LogError($"Invalid ClientDisplay index for PO: {GetParticipantOrder()}");
+                callback?.Invoke(false);
+                return;
+            }
+
+            var displaySO = ClientDisplaysSO.Instance.ClientDisplays[clientOption.ClientDisplay];
+            if (displaySO == null)
+            {
+                Debug.LogError($"ClientDisplaySO is null for PO: {GetParticipantOrder()}");
+                callback?.Invoke(false);
+                return;
+            }
+
+            if (displaySO.AuthoritativeMode == EAuthoritativeMode.Owner)
+            {
+                serverCalibrationCallback = callback;
+                RequestCalibrationClientRpc();
+            }
+            else
+            {
+                CalibrateClient(callback);
+            }
+        }
+
+        [ClientRpc]
+        private void RequestCalibrationClientRpc()
+        {
+            if (!IsLocalPlayer) return;
+            
+            CalibrateClient((success) =>
+            {
+                RespondCalibrationServerRpc(success);
+            });
+        }
+
+        [ServerRpc]
+        private void RespondCalibrationServerRpc(bool success)
+        {
+            serverCalibrationCallback?.Invoke(success);
+            serverCalibrationCallback = null;
         }
 
         public abstract bool AssignFollowTransform(InteractableObject _interactableObject, ulong targetClient);
@@ -80,7 +131,6 @@ namespace Core.SceneEntities
             }
         }
 
-
         [ClientRpc]
         public virtual void De_AssignFollowTransformClientRPC()
         {
@@ -88,10 +138,7 @@ namespace Core.SceneEntities
         }
 
         public abstract Transform GetMainCamera();
-
-        //David: Once finished callibration return a True to the provided function. onm the server we then know callibration was succesfful. false for callibration failed.
         public abstract void CalibrateClient(Action<bool> calibrationFinishedCallback);
-
         public abstract void GoForPostQuestion();
     }
 }
