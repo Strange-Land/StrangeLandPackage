@@ -34,17 +34,17 @@ namespace Core.SceneEntities
             {
                 foreach (var c in GetComponentsInChildren<Camera>())
                 {
-                    c.enabled = false;
+                    Destroy(c);
                 }
 
                 foreach (var a in GetComponentsInChildren<AudioListener>())
                 {
-                    a.enabled = false;
+                    Destroy(a);
                 }
 
                 foreach (var e in GetComponentsInChildren<EventSystem>())
                 {
-                    e.enabled = false;
+                    Destroy(e);
                 }
             }
             else
