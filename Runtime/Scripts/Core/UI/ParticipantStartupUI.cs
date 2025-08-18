@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Linq;
 using System.Text;
 using Core.Networking;
@@ -16,9 +17,13 @@ namespace Core.UI
         
         private JoinParameters _joinParameters;
         
-        private void Start()
+        private IEnumerator Start()
         {
             PopulateLanguageDropdown();
+
+            yield return new WaitForSeconds(1);
+            
+            StartClient();
         }
         
         private void PopulateLanguageDropdown()
@@ -47,6 +52,11 @@ namespace Core.UI
             
             
             ConnectionAndSpawning.Instance.StartAsClient();
+        }
+
+        public void QuitApp()
+        {
+            Application.Quit();
         }
     }
 }

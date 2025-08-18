@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Linq;
 using System.Text;
 using Core.Networking;
@@ -14,11 +15,14 @@ public class MetaStartupUI : MonoBehaviour
     public TMP_Dropdown LanguageDropdown;
     public InputField IPInputField;
     
-    private void Start()
+    private IEnumerator Start()
     {
         LoadSavedConfig();
         PopulateLanguageDropdown();
         SetupUIListeners();
+
+        yield return new WaitForSeconds(1f);
+        StartClient();
     }
     
     private void LoadSavedConfig()
@@ -95,5 +99,10 @@ public class MetaStartupUI : MonoBehaviour
     {
         ClientConfig.ResetToDefault();
         LoadSavedConfig();
+    }
+
+    public void QuitApp()
+    {
+        Application.Quit();
     }
 }
