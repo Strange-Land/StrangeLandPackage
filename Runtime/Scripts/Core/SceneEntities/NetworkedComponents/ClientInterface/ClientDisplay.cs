@@ -35,7 +35,7 @@ namespace Core.SceneEntities
                 
                 foreach (var c in GetComponentsInChildren<Camera>())
                 {
-                    Destroy(c.gameObject);
+                    c.enabled = false;
                 }
 
                 foreach (var a in GetComponentsInChildren<AudioListener>())
