@@ -32,9 +32,10 @@ namespace Core.SceneEntities
         {
             if (!IsLocalPlayer)
             {
+                
                 foreach (var c in GetComponentsInChildren<Camera>())
                 {
-                    Destroy(c);
+                    Destroy(c.gameObject);
                 }
 
                 foreach (var a in GetComponentsInChildren<AudioListener>())
