@@ -24,8 +24,10 @@ MonoBehaviour:
   - sceneAsset: {fileID: 102900000, guid: 94efa062ec163de4e99773a164aa0670, type: 3}
     required: 0
     buildIndex: 2
-  PCStartupPrefab: {fileID: 3428880296775238896, guid: 0d15872ef92f0674aa679cddee18d561, type: 3}
-  VRStartupPrefab: {fileID: 3428880296775238896, guid: 5574fc8a2298bc541ae63ed89e19802a, type: 3}
-  MobileStartupPrefab: {fileID: 0}
-  PCPlatforms: 02000000010000000d000000
-  VRPlatforms: 0b000000
+  PlatformDefinitions:
+  - Platforms: 0200000007000000
+    StartupPrefab: {fileID: 3428880296775238896, guid: 0d15872ef92f0674aa679cddee18d561, type: 3}
+    LocalPlayerPrefabs: []
+  - Platforms: 0b000000
+    StartupPrefab: {fileID: 3428880296775238896, guid: 5574fc8a2298bc541ae63ed89e19802a, type: 3}
+    LocalPlayerPrefabs: []

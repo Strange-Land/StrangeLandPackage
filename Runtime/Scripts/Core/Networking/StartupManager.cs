@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Linq;
 using Unity.Multiplayer.Playmode;
 using UnityEngine;
@@ -21,16 +20,7 @@ namespace Core.Networking
 
         private void Awake()
         {
-            // use tags if in editor, use platform if in build
-
-            if (Application.isEditor)
-            {
-                _startupMode = StartupMode.PlayModeTag;
-            }
-            else
-            {
-                _startupMode = StartupMode.Platform;
-            }
+            _startupMode = Application.isEditor ? StartupMode.PlayModeTag : StartupMode.Platform;
 
             switch (_startupMode)
             {
@@ -46,46 +36,49 @@ namespace Core.Networking
         private void TagStartup()
         {
             _playModeTags = CurrentPlayer.ReadOnlyTags();
+
+            RuntimePlatform platformToLookFor = RuntimePlatform.WindowsPlayer; 
+            bool platformTagFound = false;
+
             if (_playModeTags.Contains("PC"))
             {
-                StartPCStartup();
+                platformToLookFor = RuntimePlatform.WindowsPlayer;
+                platformTagFound = true;
             }
             else if (_playModeTags.Contains("VR"))
             {
-                StartVRStartup();
+                platformToLookFor = RuntimePlatform.Android;
+                platformTagFound = true;
             }
-            else
+
+            if (platformTagFound)
             {
-                Debug.LogError("Play mode tag not supported! Please go to the multiplayer center and add the tags");
+                foreach (var platformDef in _connectionAndSpawningSO.PlatformDefinitions)
+                {
+                    if (platformDef.Platforms.Contains(platformToLookFor))
+                    {
+                        Instantiate(platformDef.StartupPrefab);
+                        Destroy(gameObject);
+                        return;
+                    }
+                }
             }
+            
+            Debug.LogError("Play mode tag not supported or no matching platform definition found! Please go to the multiplayer center and add the tags");
         }
 
         private void PlatformStartup()
         {
-            if (_connectionAndSpawningSO.PCPlatforms.Contains(Application.platform))
+            foreach (var platformDef in _connectionAndSpawningSO.PlatformDefinitions)
             {
-                StartPCStartup();
+                if (platformDef.Platforms.Contains(Application.platform))
+                {
+                    Instantiate(platformDef.StartupPrefab);
+                    Destroy(gameObject);
+                    return;
+                }
             }
-            else if (_connectionAndSpawningSO.VRPlatforms.Contains(Application.platform))
-            {
-                StartVRStartup();
-            }
-            else
-            {
-                Debug.LogError("Platform not supported");
-            }
-        }
-
-        private void StartPCStartup()
-        {
-            Instantiate(_connectionAndSpawningSO.PCStartupPrefab);
-            Destroy(this);
-        }
-
-        private void StartVRStartup()
-        {
-            Instantiate(_connectionAndSpawningSO.VRStartupPrefab);
-            Destroy(this);
+            Debug.LogError("Platform not supported");
         }
     }
 }

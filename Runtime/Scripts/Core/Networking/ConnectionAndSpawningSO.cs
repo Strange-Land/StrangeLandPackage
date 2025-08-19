@@ -12,20 +12,14 @@ namespace Core.Networking
         public SceneField WaitingRoomScene;
         public List<SceneField> ScenarioScenes = new List<SceneField>();
         
-        
-        
-        public GameObject PCStartupPrefab;
-        public GameObject VRStartupPrefab;
-
-        public List<RuntimePlatform> PCPlatforms;
-        public List<RuntimePlatform> VRPlatforms;
-
-
+        [System.Serializable]
         public class PlatformDefinition
         {
             public List<RuntimePlatform> Platforms;
             public GameObject StartupPrefab;
             public List<GameObject> LocalPlayerPrefabs = new List<GameObject>();
         }
+        
+        public List<PlatformDefinition> PlatformDefinitions = new List<PlatformDefinition>();
     }
 }

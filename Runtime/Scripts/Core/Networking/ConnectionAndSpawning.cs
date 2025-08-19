@@ -240,12 +240,26 @@ namespace Core.Networking
             {
                 case WaitingRoom:
                     SpawnResearcherPrefabs();
+                    foreach (var clientId in NetworkManager.Singleton.ConnectedClientsIds)
+                    {
+                        if (Participants.GetPO(clientId) != ParticipantOrder.Researcher)
+                        {
+                            SpawnLocalPlayerPrefabs(clientId);
+                        }
+                    }
                     break;
                 case LoadingScenario:
                     SwitchToState(new LoadingVisuals());
                     break;
                 case LoadingVisuals:
                     SpawnResearcherPrefabs();
+                    foreach (var clientId in NetworkManager.Singleton.ConnectedClientsIds)
+                    {
+                        if (Participants.GetPO(clientId) != ParticipantOrder.Researcher)
+                        {
+                            SpawnLocalPlayerPrefabs(clientId);
+                        }
+                    }
                     SwitchToState(new Ready());
                     break;
             }
@@ -312,6 +326,8 @@ namespace Core.Networking
                 POToClientDisplay[po] = ci;
                 ci.SetParticipantOrder(po);
                 Debug.Log($"Spawned ClientDisplay for PO: {po} with ClientId: {clientId}");
+                
+                SpawnLocalPlayerPrefabs(clientId);
             }
         }
 
@@ -617,5 +633,42 @@ namespace Core.Networking
             if (_currentState == null) return "State Undefined";
             return _currentState.ToString();
         }
+        
+        private void SpawnLocalPlayerPrefabs(ulong clientId)
+        {
+            SpawnLocalPlayerPrefabsClientRpc(new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams
+                {
+                    TargetClientIds = new ulong[] { clientId }
+                }
+            });
+        }
+
+        [ClientRpc]
+        private void SpawnLocalPlayerPrefabsClientRpc(ClientRpcParams clientRpcParams = default)
+        {
+            if (NetworkManager.Singleton.IsServer) return;
+
+            Debug.Log($"Spawning local player prefabs on client {NetworkManager.Singleton.LocalClientId}");
+
+            foreach (var platformDef in _config.PlatformDefinitions)
+            {
+                if (platformDef.Platforms.Contains(Application.platform))
+                {
+                    foreach (var prefab in platformDef.LocalPlayerPrefabs)
+                    {
+                        if (prefab != null)
+                        {
+                            Instantiate(prefab);
+                            Debug.Log($"Instantiated local player prefab: {prefab.name}");
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        
+        
     }
 }
