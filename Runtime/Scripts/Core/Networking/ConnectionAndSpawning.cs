@@ -95,6 +95,8 @@ namespace Core.Networking
 
         public void StartAsClient(string ipAddress, ParticipantOrder po)
         {
+            PO = po;
+            
             NetworkManager.Singleton.GetComponent<UnityTransport>().SetConnectionData(
                 ipAddress,
                 (ushort)7777
@@ -277,7 +279,7 @@ namespace Core.Networking
 
             if (po == ParticipantOrder.Researcher)
             {
-                SpawnResearcherCamera(clientId);
+                SpawnResearcherPrefabs(clientId);
             }
             else
             {
@@ -313,25 +315,19 @@ namespace Core.Networking
             }
         }
 
-        private void SpawnResearcherCamera(ulong clientId)
+        private void SpawnResearcherPrefabs(ulong clientId)
         {
-            if (_config.ResearcherCameraPrefab == null)
-            {
-                Debug.LogError("ResearcherCameraPrefab is not assigned!");
-                return;
-            }
-
             ScenarioManager sm = GetScenarioManager();
             if (sm == null || !sm.IsInitialized)
             {
                 Debug.LogError($"Cannot spawn researcher camera: ScenarioManager not ready for client {clientId}. This should not happen.");
                 return;
             }
-
+        
             Pose poseA = sm.GetSpawnPose(ParticipantOrder.A);
             Vector3 spawnPosition = poseA.position;
             Quaternion spawnRotation = poseA.rotation;
-
+        
             SpawnResearcherCameraClientRpc(spawnPosition, spawnRotation, new ClientRpcParams
             {
                 Send = new ClientRpcSendParams
@@ -341,31 +337,19 @@ namespace Core.Networking
             });
             Debug.Log($"Requested researcher camera spawn for client {clientId} at Pose A's position");
         }
-
+        
         [ClientRpc]
         private void SpawnResearcherCameraClientRpc(Vector3 spawnPosition, Quaternion spawnRotation, ClientRpcParams clientRpcParams = default)
         {
-            if (_config.ResearcherCameraPrefab == null)
+            if (PO != ParticipantOrder.Researcher)
             {
-                Debug.LogError($"ResearcherCameraPrefab is null on client {NetworkManager.Singleton.LocalClientId}. Cannot spawn.");
                 return;
             }
 
-            ParticipantOrder po = Participants.GetPO(NetworkManager.Singleton.LocalClientId);
-            if (po != ParticipantOrder.Researcher)
+            foreach (GameObject obj in _config.ResearcherPrefabs)
             {
-                Debug.LogWarning($"Attempted to spawn researcher camera for non-researcher client {NetworkManager.Singleton.LocalClientId} (PO: {po}). Skipping spawn.");
-                return;
+                Instantiate(obj, spawnPosition, spawnRotation);
             }
-
-            if (GameObject.FindFirstObjectByType<ResearcherFPVCamera>() != null && NetworkManager.Singleton.LocalClientId == clientRpcParams.Send.TargetClientIds[0])
-            {
-                Debug.LogWarning($"Researcher camera already exists for client {NetworkManager.Singleton.LocalClientId}. Skipping spawn.");
-                return;
-            }
-
-            GameObject researcherCameraInstance = Instantiate(_config.ResearcherCameraPrefab, spawnPosition, spawnRotation);
-            Debug.Log($"Spawned researcher camera locally on client {NetworkManager.Singleton.LocalClientId}");
         }
 
         private void SpawnInteractableObject(ulong clientId)
@@ -450,8 +434,44 @@ namespace Core.Networking
 
         private void SpawnResearcherPrefabs()
         {
-            Debug.Log("Spawning researcher prefabs (server-side or common)");
+            foreach (GameObject obj in _config.ServerPrefabs)
+            {
+                Instantiate(obj);
+            }
+            
+            Debug.Log("Spawning researcher prefabs locally");
 
+            foreach (GameObject prefab in _config.ResearcherPrefabs)
+            {
+                if (prefab == null)
+                {
+                    continue;
+                }
+        
+                GameObject instance = Instantiate(prefab);
+                Debug.Log($"Instantiated local researcher prefab: {prefab.name}");
+            }
+            
+            var researcherClientIds = Participants.GetClientIDs(ParticipantOrder.Researcher);
+            if (researcherClientIds.Count > 0)
+            {
+                SpawnResearcherPrefabsClientRpc(new ClientRpcParams
+                {
+                    Send = new ClientRpcSendParams
+                    {
+                        TargetClientIds = researcherClientIds.ToArray()
+                    }
+                });
+            }
+        }
+        
+        [ClientRpc]
+        private void SpawnResearcherPrefabsClientRpc(ClientRpcParams clientRpcParams = default)
+        {
+            if (NetworkManager.Singleton.IsServer) return;
+    
+            Debug.Log($"Spawning researcher prefabs on researcher client {NetworkManager.Singleton.LocalClientId}");
+    
             foreach (GameObject prefab in _config.ResearcherPrefabs)
             {
                 if (prefab == null)
@@ -459,22 +479,9 @@ namespace Core.Networking
                     Debug.LogWarning("A prefab in _researcherPrefabs list is null. Skipping.");
                     continue;
                 }
+        
                 GameObject instance = Instantiate(prefab);
-                NetworkObject netObj = instance.GetComponent<NetworkObject>();
-                if (netObj != null)
-                {
-                    if (!netObj.IsSpawned) netObj.Spawn(true);
-                    Debug.Log($"Spawned researcher NetworkObject prefab: {prefab.name}");
-                }
-                else
-                {
-                    Debug.Log($"Instantiated local researcher prefab: {prefab.name}");
-                }
-            }
-
-            if (NetworkManager.Singleton.IsServer)
-            {
-                Instantiate(_config.ResearcherCameraPrefab);
+                Debug.Log($"Instantiated local researcher prefab: {prefab.name}");
             }
         }
 
