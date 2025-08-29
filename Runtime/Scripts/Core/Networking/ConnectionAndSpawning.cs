@@ -422,7 +422,8 @@ namespace Core.Networking
             ClientDisplay clientDisplay = POToClientDisplay[po];
             if (clientDisplay != null)
             {
-                if (clientDisplay.NetworkObject.IsSpawned && io.NetworkObject.IsSpawned)
+                // TODO: Check what is going on
+                // if (clientDisplay.NetworkObject.IsSpawned && io.NetworkObject.IsSpawned)
                 {
                     bool success = clientDisplay.AssignFollowTransform(io, clientId);
                     if (!success) Debug.LogError($"Failed to assign follow transform for PO {po} to {io.name}.");
