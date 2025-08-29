@@ -452,7 +452,16 @@ namespace Core.Networking
         {
             ScenarioManager sm = GetScenarioManager();
 
-            Pose poseR = sm.GetSpawnPose(ParticipantOrder.Researcher);
+            Pose poseR;
+            
+            if (sm == null || !sm.IsInitialized)
+            {
+                poseR = new Pose();
+            }
+            else
+            {
+                poseR = sm.GetSpawnPose(ParticipantOrder.Researcher);
+            }
             
             foreach (GameObject obj in _config.ServerPrefabs)
             {
