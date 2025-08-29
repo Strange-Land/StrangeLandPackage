@@ -14,8 +14,8 @@ namespace Core.SceneEntities
 {
     public class StrangeLandLogger : MonoBehaviour
     {
-        public const char sep = ';';
-        public const string Fpres = "F6";
+        public char sep = ';';
+        public string Fpres = "F6";
         public float UpdatePerSecond = 25f;
         private float _updatedFreqeuncy => 1f / UpdatePerSecond;
         private readonly ConcurrentQueue<string> databuffer = new ConcurrentQueue<string>();
@@ -32,7 +32,21 @@ namespace Core.SceneEntities
         private EServerState lastKnownServerState;
         private bool hasLoggedRecordingStart = false;
 
+        private readonly object triggerLock = new object();
+        private Dictionary<string, TriggerState> triggers = new Dictionary<string, TriggerState>();
+        private List<string> orderedTriggerIds = new List<string>();
+        private bool triggersDirty = false;
+
         public static StrangeLandLogger Instance { get; private set; }
+
+        private class TriggerState
+        {
+            public string Id { get; set; }
+            public bool IsActive { get; set; }
+            public bool IsOneShot { get; set; }
+            public bool WasTriggeredThisFrame { get; set; }
+            public int ActiveCount { get; set; }
+        }
 
         private void Awake()
         {
@@ -101,9 +115,29 @@ namespace Core.SceneEntities
         private void LateUpdate()
         {
             if (!RECORDING) return;
+           
+            lock (triggerLock)
+            {
+                foreach (var trigger in triggers.Values)
+                {
+                    if (trigger.IsOneShot && trigger.WasTriggeredThisFrame)
+                    {
+                        trigger.IsActive = false;
+                        trigger.WasTriggeredThisFrame = false;
+                    }
+                }
+            }
+           
             if (NextUpdate < Time.time)
             {
                 NextUpdate = Time.time + _updatedFreqeuncy;
+               
+                if (triggersDirty)
+                {
+                    RebuildLogItems();
+                    triggersDirty = false;
+                }
+               
                 string outVal = "";
                 foreach (var item in logItems)
                     outVal += item.Serialize() + sep;
@@ -113,6 +147,149 @@ namespace Core.SceneEntities
                 {
                     FlushLogStream();
                 }
+            }
+        }
+
+        public bool RegisterTrigger(string triggerId)
+        {
+            if (string.IsNullOrEmpty(triggerId))
+            {
+                Debug.LogError("StrangeLandLogger: Cannot register trigger with null or empty ID");
+                return false;
+            }
+
+            lock (triggerLock)
+            {
+                if (triggers.ContainsKey(triggerId))
+                {
+                    Debug.LogWarning($"StrangeLandLogger: Trigger '{triggerId}' is already registered");
+                    return false;
+                }
+
+                triggers[triggerId] = new TriggerState
+                {
+                    Id = triggerId,
+                    IsActive = false,
+                    IsOneShot = false,
+                    WasTriggeredThisFrame = false,
+                    ActiveCount = 0
+                };
+                orderedTriggerIds.Add(triggerId);
+
+                if (RECORDING)
+                {
+                    triggersDirty = true;
+                }
+
+                Debug.Log($"StrangeLandLogger: Registered trigger '{triggerId}'");
+                return true;
+            }
+        }
+
+        public bool UnregisterTrigger(string triggerId)
+        {
+            if (string.IsNullOrEmpty(triggerId))
+                return false;
+
+            lock (triggerLock)
+            {
+                if (triggers.Remove(triggerId))
+                {
+                    orderedTriggerIds.Remove(triggerId);
+                   
+                    if (RECORDING)
+                    {
+                        triggersDirty = true;
+                    }
+                   
+                    Debug.Log($"StrangeLandLogger: Unregistered trigger '{triggerId}'");
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        public void TriggerOneShot(string triggerId)
+        {
+            if (string.IsNullOrEmpty(triggerId))
+                return;
+
+            lock (triggerLock)
+            {
+                if (!triggers.TryGetValue(triggerId, out TriggerState trigger))
+                {
+                    Debug.LogWarning($"StrangeLandLogger: Trigger '{triggerId}' not registered. Call RegisterTrigger first.");
+                    return;
+                }
+
+                trigger.IsActive = true;
+                trigger.IsOneShot = true;
+                trigger.WasTriggeredThisFrame = true;
+            }
+        }
+
+        public void TriggerStart(string triggerId)
+        {
+            if (string.IsNullOrEmpty(triggerId))
+                return;
+
+            lock (triggerLock)
+            {
+                if (!triggers.TryGetValue(triggerId, out TriggerState trigger))
+                {
+                    Debug.LogWarning($"StrangeLandLogger: Trigger '{triggerId}' not registered. Call RegisterTrigger first.");
+                    return;
+                }
+
+                trigger.ActiveCount++;
+                if (trigger.ActiveCount == 1)
+                {
+                    trigger.IsActive = true;
+                    trigger.IsOneShot = false;
+                }
+            }
+        }
+
+        public void TriggerEnd(string triggerId)
+        {
+            if (string.IsNullOrEmpty(triggerId))
+                return;
+
+            lock (triggerLock)
+            {
+                if (!triggers.TryGetValue(triggerId, out TriggerState trigger))
+                {
+                    Debug.LogWarning($"StrangeLandLogger: Trigger '{triggerId}' not registered.");
+                    return;
+                }
+
+                if (trigger.ActiveCount > 0)
+                {
+                    trigger.ActiveCount--;
+                    if (trigger.ActiveCount == 0)
+                    {
+                        trigger.IsActive = false;
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning($"StrangeLandLogger: TriggerEnd called for '{triggerId}' without matching TriggerStart");
+                }
+            }
+        }
+
+        public bool IsTriggerActive(string triggerId)
+        {
+            if (string.IsNullOrEmpty(triggerId))
+                return false;
+
+            lock (triggerLock)
+            {
+                if (triggers.TryGetValue(triggerId, out TriggerState trigger))
+                {
+                    return trigger.IsActive;
+                }
+                return false;
             }
         }
 
@@ -155,7 +332,6 @@ namespace Core.SceneEntities
             if (!NetworkManager.Singleton.IsServer)
                 return false;
 
-            // Don't record in WaitingRoom
             if (ConnectionAndSpawning.Instance != null &&
                 ConnectionAndSpawning.Instance.ServerStateEnum.Value != EServerState.Interact)
                 return false;
@@ -191,6 +367,23 @@ namespace Core.SceneEntities
             recordedGameObjects.Clear();
             hasLoggedRecordingStart = false;
 
+            BuildLogItems();
+           
+            var headerRow = "";
+            foreach (var item in logItems)
+                headerRow += item.GetJsonPropertyName() + sep;
+            EnqueueData(headerRow.TrimEnd(sep) + "\n");
+            doneSending = false;
+            isSending = true;
+            send = new Thread(ContinuousDataSend);
+            send.Start();
+            Debug.Log($"Started Recording to file: {path}");
+            ScenarioStartTime = Time.time;
+            RECORDING = true;
+        }
+
+        private void BuildLogItems()
+        {
             logItems = new List<LogItem>
             {
                 new LogItem(null, (refobj) => Time.time.ToString(Fpres), "GameTime"),
@@ -198,17 +391,16 @@ namespace Core.SceneEntities
                 new LogItem(null, (refobj) => Time.smoothDeltaTime.ToString(Fpres), "DeltaTime"),
                 new LogItem(null, (refobj) => Time.frameCount.ToString(), "FrameCount")
             };
+           
             StrangeLandTransform[] strangeLandObjects = FindObjectsByType<StrangeLandTransform>(sortMode: FindObjectsSortMode.None);
             foreach (var slt in strangeLandObjects)
             {
                 ParticipantOrder PO;
                 string parentName;
-                // OK so the parent name is a bit wonky to implement, for now the name of gameobject should be sufficient
                 FindClosestParentDisplayOrInteractable(slt.transform, out PO, out parentName);
                 string finalNameForLog = !string.IsNullOrEmpty(slt.OverrideName) ? slt.OverrideName : slt.gameObject.name;
                 string labelPrefix = PO.ToString() + "_" + finalNameForLog;
 
-                // Record the GameObject for logging
                 recordedGameObjects.Add(slt.gameObject.name);
 
                 if (slt.LogPosition)
@@ -224,17 +416,40 @@ namespace Core.SceneEntities
                     logItems.Add(new LogItem(slt.gameObject, ScaleLog, labelPrefix + "_Scale"));
                 }
             }
+           
+            lock (triggerLock)
+            {
+                foreach (var triggerId in orderedTriggerIds)
+                {
+                    if (triggers.TryGetValue(triggerId, out TriggerState trigger))
+                    {
+                        string localId = triggerId;
+                        logItems.Add(new LogItem(null, (refobj) => GetTriggerValue(localId), $"Trigger_{triggerId}"));
+                    }
+                }
+            }
+        }
+
+        private void RebuildLogItems()
+        {
+            BuildLogItems();
+           
             var headerRow = "";
             foreach (var item in logItems)
                 headerRow += item.GetJsonPropertyName() + sep;
-            EnqueueData(headerRow.TrimEnd(sep) + "\n");
-            doneSending = false;
-            isSending = true;
-            send = new Thread(ContinuousDataSend);
-            send.Start();
-            Debug.Log($"Started Recording to file: {path}");
-            ScenarioStartTime = Time.time;
-            RECORDING = true;
+            EnqueueData($"# SCHEMA_UPDATE: {headerRow.TrimEnd(sep)}\n");
+        }
+
+        private string GetTriggerValue(string triggerId)
+        {
+            lock (triggerLock)
+            {
+                if (triggers.TryGetValue(triggerId, out TriggerState trigger))
+                {
+                    return trigger.IsActive ? "1" : "0";
+                }
+                return "0";
+            }
         }
 
         [ContextMenu("StopRecording")]
@@ -242,10 +457,8 @@ namespace Core.SceneEntities
         {
             if (!isRecording()) return;
 
-            // Stop the data sending thread
             isSending = false;
 
-            // Flush any remaining data in the buffer
             string data;
             while (databuffer.TryDequeue(out data))
             {
@@ -262,7 +475,6 @@ namespace Core.SceneEntities
                 }
             }
 
-            // Close the stream and log
             RECORDING = false;
             CloseLogs();
 
@@ -295,6 +507,18 @@ namespace Core.SceneEntities
             foreach (var objName in recordedGameObjects)
             {
                 sb.AppendLine($"- {objName}");
+            }
+           
+            lock (triggerLock)
+            {
+                if (triggers.Count > 0)
+                {
+                    sb.AppendLine($"Registered {triggers.Count} triggers:");
+                    foreach (var triggerId in orderedTriggerIds)
+                    {
+                        sb.AppendLine($"- Trigger_{triggerId}");
+                    }
+                }
             }
 
             Debug.Log(sb.ToString());
