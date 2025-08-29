@@ -340,7 +340,7 @@ namespace Core.Networking
                 return;
             }
         
-            Pose poseA = sm.GetSpawnPose(ParticipantOrder.A);
+            Pose poseA = sm.GetSpawnPose(ParticipantOrder.Researcher);
             Vector3 spawnPosition = poseA.position;
             Quaternion spawnRotation = poseA.rotation;
         
