@@ -420,11 +420,14 @@ namespace Core.Networking
             yield return null;
 
             ClientDisplay clientDisplay = POToClientDisplay[po];
-            if (clientDisplay != null && clientDisplay.NetworkObject.IsSpawned && io.NetworkObject.IsSpawned)
+            if (clientDisplay != null)
             {
-                bool success = clientDisplay.AssignFollowTransform(io, clientId);
-                if (!success) Debug.LogError($"Failed to assign follow transform for PO {po} to {io.name}.");
-                else Debug.Log($"Assigned follow transform for PO {po} to {io.name}");
+                if (clientDisplay.NetworkObject.IsSpawned && io.NetworkObject.IsSpawned)
+                {
+                    bool success = clientDisplay.AssignFollowTransform(io, clientId);
+                    if (!success) Debug.LogError($"Failed to assign follow transform for PO {po} to {io.name}.");
+                    else Debug.Log($"Assigned follow transform for PO {po} to {io.name}");
+                }
             }
             else
             {
@@ -665,6 +668,9 @@ namespace Core.Networking
 
             Debug.Log($"Spawning local player prefabs on client {NetworkManager.Singleton.LocalClientId}");
 
+            ScenarioManager sm = FindFirstObjectByType<ScenarioManager>();
+            Pose spawnPose = sm.GetSpawnPose(PO);
+
             foreach (var platformDef in _config.PlatformDefinitions)
             {
                 if (platformDef.Platforms.Contains(Application.platform))
@@ -673,7 +679,7 @@ namespace Core.Networking
                     {
                         if (prefab != null)
                         {
-                            Instantiate(prefab);
+                            Instantiate(prefab,  spawnPose.position, spawnPose.rotation);
                             Debug.Log($"Instantiated local player prefab: {prefab.name}");
                         }
                     }
