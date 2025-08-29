@@ -340,9 +340,9 @@ namespace Core.Networking
                 return;
             }
         
-            Pose poseA = sm.GetSpawnPose(ParticipantOrder.Researcher);
-            Vector3 spawnPosition = poseA.position;
-            Quaternion spawnRotation = poseA.rotation;
+            Pose PoseR = sm.GetSpawnPose(ParticipantOrder.Researcher);
+            Vector3 spawnPosition = PoseR.position;
+            Quaternion spawnRotation = PoseR.rotation;
         
             SpawnResearcherCameraClientRpc(spawnPosition, spawnRotation, new ClientRpcParams
             {
@@ -450,6 +450,10 @@ namespace Core.Networking
 
         private void SpawnResearcherPrefabs()
         {
+            ScenarioManager sm = GetScenarioManager();
+
+            Pose poseR = sm.GetSpawnPose(ParticipantOrder.Researcher);
+            
             foreach (GameObject obj in _config.ServerPrefabs)
             {
                 Instantiate(obj);
@@ -464,7 +468,7 @@ namespace Core.Networking
                     continue;
                 }
         
-                GameObject instance = Instantiate(prefab);
+                GameObject instance = Instantiate(prefab, poseR.position, poseR.rotation);
                 Debug.Log($"Instantiated local researcher prefab: {prefab.name}");
             }
             
