@@ -17,6 +17,7 @@ namespace Core.SceneEntities
         public char sep = ';';
         public string Fpres = "F6";
         public float UpdatePerSecond = 25f;
+        public bool EncodeTransform = true;
         private float _updatedFreqeuncy => 1f / UpdatePerSecond;
         private readonly ConcurrentQueue<string> databuffer = new ConcurrentQueue<string>();
         private bool doneSending;
@@ -581,40 +582,61 @@ namespace Core.SceneEntities
         private string PositionLog(GameObject o)
         {
             if (o == null) return string.Empty;
-
             Transform t = o.transform;
             Vector3 pos = t.position;
-            byte[] buffer = new byte[3 * 4];
-            Array.Copy(BitConverter.GetBytes(pos.x), 0, buffer, 0, 4);
-            Array.Copy(BitConverter.GetBytes(pos.y), 0, buffer, 4, 4);
-            Array.Copy(BitConverter.GetBytes(pos.z), 0, buffer, 8, 4);
-            return Convert.ToBase64String(buffer);
+
+            if (EncodeTransform)
+            {
+                byte[] buffer = new byte[3 * 4];
+                Buffer.BlockCopy(BitConverter.GetBytes(pos.x), 0, buffer, 0, 4);
+                Buffer.BlockCopy(BitConverter.GetBytes(pos.y), 0, buffer, 4, 4);
+                Buffer.BlockCopy(BitConverter.GetBytes(pos.z), 0, buffer, 8, 4);
+                return Convert.ToBase64String(buffer);
+            }
+            else
+            {
+                return $"({pos.x.ToString(Fpres)},{pos.y.ToString(Fpres)},{pos.z.ToString(Fpres)})";
+            }
         }
 
         private string OrientationLog(GameObject o)
         {
             if (o == null) return string.Empty;
-
             Transform t = o.transform;
             Vector3 euler = t.rotation.eulerAngles;
-            byte[] buffer = new byte[3 * 4];
-            Array.Copy(BitConverter.GetBytes(euler.x), 0, buffer, 0, 4);
-            Array.Copy(BitConverter.GetBytes(euler.y), 0, buffer, 4, 4);
-            Array.Copy(BitConverter.GetBytes(euler.z), 0, buffer, 8, 4);
-            return Convert.ToBase64String(buffer);
+
+            if (EncodeTransform)
+            {
+                byte[] buffer = new byte[3 * 4];
+                Buffer.BlockCopy(BitConverter.GetBytes(euler.x), 0, buffer, 0, 4);
+                Buffer.BlockCopy(BitConverter.GetBytes(euler.y), 0, buffer, 4, 4);
+                Buffer.BlockCopy(BitConverter.GetBytes(euler.z), 0, buffer, 8, 4);
+                return Convert.ToBase64String(buffer);
+            }
+            else
+            {
+                return $"({euler.x.ToString(Fpres)},{euler.y.ToString(Fpres)},{euler.z.ToString(Fpres)})";
+            }
         }
 
         private string ScaleLog(GameObject o)
         {
             if (o == null) return string.Empty;
-
             Transform t = o.transform;
             Vector3 scale = t.lossyScale;
-            byte[] buffer = new byte[3 * 4];
-            Array.Copy(BitConverter.GetBytes(scale.x), 0, buffer, 0, 4);
-            Array.Copy(BitConverter.GetBytes(scale.y), 0, buffer, 4, 4);
-            Array.Copy(BitConverter.GetBytes(scale.z), 0, buffer, 8, 4);
-            return Convert.ToBase64String(buffer);
+
+            if (EncodeTransform)
+            {
+                byte[] buffer = new byte[3 * 4];
+                Buffer.BlockCopy(BitConverter.GetBytes(scale.x), 0, buffer, 0, 4);
+                Buffer.BlockCopy(BitConverter.GetBytes(scale.y), 0, buffer, 4, 4);
+                Buffer.BlockCopy(BitConverter.GetBytes(scale.z), 0, buffer, 8, 4);
+                return Convert.ToBase64String(buffer);
+            }
+            else
+            {
+                return $"({scale.x.ToString(Fpres)},{scale.y.ToString(Fpres)},{scale.z.ToString(Fpres)})";
+            }
         }
 
         private void FindClosestParentDisplayOrInteractable(Transform child, out ParticipantOrder pOrder, out string parentName)
