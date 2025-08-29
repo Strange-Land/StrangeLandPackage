@@ -44,7 +44,6 @@ namespace Core.SceneEntities
             public string Id { get; set; }
             public bool IsActive { get; set; }
             public bool IsOneShot { get; set; }
-            public bool WasTriggeredThisFrame { get; set; }
             public int ActiveCount { get; set; }
         }
 
@@ -116,18 +115,6 @@ namespace Core.SceneEntities
         {
             if (!RECORDING) return;
            
-            lock (triggerLock)
-            {
-                foreach (var trigger in triggers.Values)
-                {
-                    if (trigger.IsOneShot && trigger.WasTriggeredThisFrame)
-                    {
-                        trigger.IsActive = false;
-                        trigger.WasTriggeredThisFrame = false;
-                    }
-                }
-            }
-           
             if (NextUpdate < Time.time)
             {
                 NextUpdate = Time.time + _updatedFreqeuncy;
@@ -171,7 +158,6 @@ namespace Core.SceneEntities
                     Id = triggerId,
                     IsActive = false,
                     IsOneShot = false,
-                    WasTriggeredThisFrame = false,
                     ActiveCount = 0
                 };
                 orderedTriggerIds.Add(triggerId);
@@ -224,7 +210,6 @@ namespace Core.SceneEntities
 
                 trigger.IsActive = true;
                 trigger.IsOneShot = true;
-                trigger.WasTriggeredThisFrame = true;
             }
         }
 
@@ -444,9 +429,13 @@ namespace Core.SceneEntities
         {
             lock (triggerLock)
             {
-                if (triggers.TryGetValue(triggerId, out TriggerState trigger))
+                if (triggers.TryGetValue(triggerId, out TriggerState trigger) && trigger.IsActive)
                 {
-                    return trigger.IsActive ? "1" : "0";
+                    if (trigger.IsOneShot)
+                    {
+                        trigger.IsActive = false;
+                    }
+                    return "1";
                 }
                 return "0";
             }

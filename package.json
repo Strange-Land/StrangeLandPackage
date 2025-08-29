@@ -1,6 +1,6 @@
 {
   "name": "com.strangeland.core",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "displayName": "StrangeLand Core",
   "description": "A flexible framework for building multiplayer research experiments in Unity. Manages networking, scene-based scenarios, participant roles, and data logging.",
   "unity": "6000.0",
