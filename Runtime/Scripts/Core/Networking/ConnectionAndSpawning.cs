@@ -12,7 +12,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using Core.Utilities;
 
-/* notes about server states
+/* note, feel free to remove
 Default -> Waiting Room: ServerStarted
 Waiting Room -> Loading Scenario: SwitchToLoading that triggers from UI
 Loading Scenario -> Loading Visuals: SceneEvent_Server (base scene load completed)
@@ -73,56 +73,6 @@ namespace Core.Networking
                 }
             }
 
-        }
-
-        private void OnDestroy()
-        {
-            if (ConnectionAndSpawning.Instance != null)
-            {
-                ConnectionAndSpawning.Instance.ServerStateEnum.OnValueChanged -= OnServerStateChanged;
-            }
-            
-            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && NetworkManager.Singleton.IsListening)
-            {
-                NotifyClientsToQuitClientRpc();
-            }
-        }
-
-        private void OnApplicationQuit()
-        {
-            if (isRecording())
-            {
-                StopRecording();
-            }
-            
-            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && NetworkManager.Singleton.IsListening)
-            {
-                StartCoroutine(NotifyClientsBeforeQuit());
-            }
-        }
-
-        private IEnumerator NotifyClientsBeforeQuit()
-        {
-            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
-            {
-                NotifyClientsToQuitClientRpc();
-                yield return new WaitForSeconds(0.5f);
-            }
-        }
-
-        [ClientRpc]
-        private void NotifyClientsToQuitClientRpc()
-        {
-            if (!NetworkManager.Singleton.IsServer)
-            {
-                Debug.Log("Server has shut down. Closing client application...");
-                
-                #if UNITY_EDITOR
-                UnityEditor.EditorApplication.isPlaying = false;
-                #else
-                Application.Quit();
-                #endif
-            }
         }
 
         public void StartAsServer()
@@ -284,7 +234,6 @@ namespace Core.Networking
         private void LoadEventCompleted(SceneEvent sceneEvent)
         {
             // This event signifies that ALL clients (including server) have finished a Load or Unload operation.
-
             Debug.Log($"SceneEvent_Server: LoadEventCompleted for scene {sceneEvent.SceneName} and type {sceneEvent.SceneEventType}. Current state: {_currentState?.GetType().Name}");
 
             switch (_currentState)
@@ -323,6 +272,7 @@ namespace Core.Networking
 
         private IEnumerator IEClientConnectedInternal(ulong clientId)
         {
+            // Wait a frame to ensure scene loading has progressed
             yield return null;
 
             ScenarioManager sm = GetScenarioManager();
