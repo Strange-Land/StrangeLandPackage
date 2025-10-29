@@ -316,7 +316,7 @@ namespace Core.Networking
                     yield break;
                 }
 
-                netObj.SpawnAsPlayerObject(clientId);
+                netObj.Spawn(true);
 
                 ClientDisplay ci = clientInterfaceInstance.GetComponent<ClientDisplay>();
                 if (ci == null)
