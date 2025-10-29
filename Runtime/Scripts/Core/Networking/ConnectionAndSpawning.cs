@@ -90,6 +90,7 @@ namespace Core.Networking
 
         public void StartAsClient()
         {
+            NetworkManager.Singleton.OnClientDisconnectCallback += OnLocalClientDisconnected;
             NetworkManager.Singleton.StartClient();
         }
 
@@ -111,6 +112,7 @@ namespace Core.Networking
 
             Debug.Log($"starting client: ip: {NetworkManager.Singleton.GetComponent<UnityTransport>().ConnectionData.Address}");
             
+            NetworkManager.Singleton.OnClientDisconnectCallback += OnLocalClientDisconnected;
             NetworkManager.Singleton.StartClient();
         }
 
@@ -688,7 +690,67 @@ namespace Core.Networking
                 }
             }
         }
-        
-        
+
+        private void OnApplicationQuit()
+        {
+            if (NetworkManager.Singleton == null)
+            {
+                return;
+            }
+            if (NetworkManager.Singleton.IsServer)
+            {
+                try
+                {
+                    // Notify all clients to quit before the transport shuts down
+                    ForceQuitClientRpc();
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogWarning($"Failed to broadcast quit to clients: {e.Message}");
+                }
+            }
+        }
+
+        private void OnLocalClientDisconnected(ulong clientId)
+        {
+            if (NetworkManager.Singleton == null)
+            {
+                return;
+            }
+            // On clients, this callback is invoked for the local client when disconnected from the server
+            if (!NetworkManager.Singleton.IsServer && NetworkManager.Singleton.IsClient && clientId == NetworkManager.Singleton.LocalClientId)
+            {
+                QuitApplication();
+            }
+        }
+
+        [ClientRpc]
+        private void ForceQuitClientRpc(ClientRpcParams clientRpcParams = default)
+        {
+            if (NetworkManager.Singleton.IsServer)
+            {
+                return;
+            }
+            QuitApplication();
+        }
+
+        private void QuitApplication()
+        {
+            try
+            {
+                Debug.Log("Quitting application due to server shutdown/disconnect.");
+#if UNITY_EDITOR
+                // If running as client in Editor, stop play mode
+                UnityEditor.EditorApplication.isPlaying = false;
+#else
+                Application.Quit();
+#endif
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"QuitApplication encountered an error: {e.Message}");
+            }
+        }
+
     }
 }
