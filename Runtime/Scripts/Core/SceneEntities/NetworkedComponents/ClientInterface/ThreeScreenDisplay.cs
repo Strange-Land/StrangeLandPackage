@@ -6,6 +6,8 @@ namespace Core.SceneEntities
 {
     public class ThreeScreenDisplay : ClientDisplay
     {
+        [SerializeField] private bool _activateDisplay = false;
+        
         public override bool AssignFollowTransform(InteractableObject MyInteractableObject, ulong targetClient)
         {
             NetworkObject netobj = MyInteractableObject.NetworkObject;
@@ -14,8 +16,12 @@ namespace Core.SceneEntities
             transform.rotation = MyInteractableObject.GetCameraPositionObject().rotation;
 
             bool success = NetworkObject.TrySetParent(netobj, true);
-            
-            Display.displays[1].Activate();
+
+            if (_activateDisplay)
+            {
+                Display.displays[1].Activate();
+            }
+
             return success;
         }
 
