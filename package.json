@@ -8,7 +8,8 @@
   "dependencies": {
     "com.unity.netcode.gameobjects": "2.4.3",
     "com.unity.multiplayer.playmode": "1.4.2",
-    "com.unity.inputsystem": "1.14.0"
+    "com.unity.inputsystem": "1.14.0",
+    "com.mrtimcakes.directinput": "https://github.com/MrTimcakes/Unity-DirectInput.git"
   },
   "keywords": [
     "networking",
