@@ -474,19 +474,21 @@ namespace Core.Networking
                 Instantiate(obj);
             }
             
-            Debug.Log("Spawning researcher prefabs locally");
-
-            foreach (GameObject prefab in _config.ResearcherPrefabs)
+            if (Participants.GetPO(NetworkManager.Singleton.LocalClientId) == ParticipantOrder.Researcher)
             {
-                if (prefab == null)
+                Debug.Log("Spawning researcher prefabs locally");
+
+                foreach (GameObject prefab in _config.ResearcherPrefabs)
                 {
-                    continue;
-                }
+                    if (prefab == null)
+                    {
+                        continue;
+                    }
         
-                GameObject instance = Instantiate(prefab, poseR.position, poseR.rotation);
-                Debug.Log($"Instantiated local researcher prefab: {prefab.name}");
+                    GameObject instance = Instantiate(prefab, poseR.position, poseR.rotation);
+                    Debug.Log($"Instantiated local researcher prefab: {prefab.name}");
+                }
             }
-            
             var researcherClientIds = Participants.GetClientIDs(ParticipantOrder.Researcher);
             if (researcherClientIds.Count > 0)
             {
