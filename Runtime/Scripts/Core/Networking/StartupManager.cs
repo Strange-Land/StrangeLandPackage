@@ -1,5 +1,5 @@
 using System.Linq;
-using Unity.Multiplayer.Playmode;
+
 using UnityEngine;
 
 namespace Core.Networking
@@ -35,7 +35,7 @@ namespace Core.Networking
 
         private void TagStartup()
         {
-            _playModeTags = CurrentPlayer.ReadOnlyTags();
+            _playModeTags = Unity.Multiplayer.PlayMode.CurrentPlayer.ReadOnlyTags();
 
             RuntimePlatform platformToLookFor = RuntimePlatform.WindowsPlayer; 
             bool platformTagFound = false;

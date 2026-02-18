@@ -2,7 +2,10 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using Core.Networking;
@@ -402,7 +405,31 @@ namespace Core.SceneEntities
                     logItems.Add(new LogItem(slt.gameObject, ScaleLog, labelPrefix + "_Scale"));
                 }
             }
-           
+            var varLogs = FindObjectsByType<StrangeLandVarLog>(FindObjectsSortMode.None);
+
+            foreach (var vl in varLogs)
+            {
+                if (vl.bindings == null) continue;
+
+                foreach (var b in vl.bindings)
+                {
+                    if (b == null || b.target == null || string.IsNullOrEmpty(b.memberName))
+                        continue;
+
+                    // build fast getter once
+                    if (!TryMakeFastGetter(b.target, b.memberName, Fpres, out var getter))
+                        continue;
+
+                    // column label
+                    string column =
+                        !string.IsNullOrEmpty(b.label)
+                            ? b.label
+                            : $"{vl.gameObject.name}_{b.memberName}";
+
+                    logItems.Add(new LogItem(null, _ => getter(), column));
+                }
+            }
+
             lock (triggerLock)
             {
                 foreach (var triggerId in orderedTriggerIds)
@@ -683,6 +710,60 @@ namespace Core.SceneEntities
             {
                 return jsonPropertyName;
             }
+        }
+         private static bool TryMakeFastGetter(Component target, string memberName, string fPres, out Func<string> getter)
+        {
+            getter = null;
+            if (target == null || string.IsNullOrEmpty(memberName)) return false;
+
+            var type = target.GetType();
+            const BindingFlags F = BindingFlags.Instance | BindingFlags.Public;
+
+            MemberExpression access;
+            Type valueType;
+
+            var tConst = Expression.Constant(target);
+            var field = type.GetField(memberName, F);
+            if (field != null)
+            {
+                access = Expression.Field(tConst, field);
+                valueType = field.FieldType;
+            }
+            else
+            {
+                var prop = type.GetProperty(memberName, F);
+                if (prop == null || !prop.CanRead || prop.GetIndexParameters().Length != 0) return false;
+                access = Expression.Property(tConst, prop);
+                valueType = prop.PropertyType;
+            }
+
+            // Build a typed formatter: int/float/enum only (your editor already enforces this)
+            if (valueType == typeof(int))
+            {
+                var toStr = typeof(int).GetMethod(nameof(int.ToString), Type.EmptyTypes);
+                getter = Expression.Lambda<Func<string>>(Expression.Call(access, toStr)).Compile();
+                return true;
+            }
+
+            if (valueType == typeof(float))
+            {
+                var toStr = typeof(float).GetMethod(nameof(float.ToString), new[] { typeof(string), typeof(IFormatProvider) });
+                var fmt = Expression.Constant(fPres);
+                var inv = Expression.Constant(CultureInfo.InvariantCulture, typeof(IFormatProvider));
+                getter = Expression.Lambda<Func<string>>(Expression.Call(access, toStr, fmt, inv)).Compile();
+                return true;
+            }
+
+            if (valueType.IsEnum)
+            {
+                // enum.ToString()
+                var toStr = typeof(object).GetMethod(nameof(ToString));
+                var boxed = Expression.Convert(access, typeof(object));
+                getter = Expression.Lambda<Func<string>>(Expression.Call(boxed, toStr)).Compile();
+                return true;
+            }
+
+            return false;
         }
     }
 }
