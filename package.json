@@ -30,6 +30,11 @@
       "displayName": "Meta VR Support",
       "description": "Please import meta sdk, then replace the placeholder VR prefab with the supplied prefab",
       "path": "Sample_VR~"
+    },
+        {
+      "displayName": "XR VR Support",
+      "description": "Please import XR interaction toolkit, then replace the placeholder VR prefab with the supplied prefab",
+      "path": "Sample_OpenXR~"
     }
   ]
 }
