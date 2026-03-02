@@ -23,14 +23,18 @@ namespace Core.SceneEntities
         public bool EncodeTransform = true;
         private float _updatedFreqeuncy => 1f / UpdatePerSecond;
         private readonly ConcurrentQueue<string> databuffer = new ConcurrentQueue<string>();
+
+        private readonly ConcurrentQueue<string> eventbuffer = new ConcurrentQueue<string>();
         private bool doneSending;
         private bool isSending;
         private bool RECORDING;
         private float NextUpdate;
         private double ScenarioStartTime;
         private Thread send;
-        private StreamWriter logStream;
-        private string path;
+        private StreamWriter continuesLogStream;
+        private StreamWriter eventLogStream;
+        private string continuesPath;
+        private string eventPath;
         private List<LogItem> logItems;
         private HashSet<string> recordedGameObjects = new HashSet<string>();
         private EServerState lastKnownServerState;
@@ -97,6 +101,7 @@ namespace Core.SceneEntities
                 {
                     scenarioName = ConnectionAndSpawning.Instance.GetScenarioManager().gameObject.scene.name;
                 }
+
                 StartRecording(scenarioName, DateTime.Now.ToString("yyyyMMdd_HHmmss"));
             }
         }
@@ -111,6 +116,7 @@ namespace Core.SceneEntities
                 {
                     LogRecordedObjects(true);
                 }
+
                 hasLoggedRecordingStart = true;
             }
         }
@@ -118,17 +124,17 @@ namespace Core.SceneEntities
         private void LateUpdate()
         {
             if (!RECORDING) return;
-           
+
             if (NextUpdate < Time.time)
             {
                 NextUpdate = Time.time + _updatedFreqeuncy;
-               
+
                 if (triggersDirty)
                 {
                     RebuildLogItems();
                     triggersDirty = false;
                 }
-               
+
                 string outVal = "";
                 foreach (var item in logItems)
                     outVal += item.Serialize() + sep;
@@ -186,15 +192,16 @@ namespace Core.SceneEntities
                 if (triggers.Remove(triggerId))
                 {
                     orderedTriggerIds.Remove(triggerId);
-                   
+
                     if (RECORDING)
                     {
                         triggersDirty = true;
                     }
-                   
+
                     Debug.Log($"StrangeLandLogger: Unregistered trigger '{triggerId}'");
                     return true;
                 }
+
                 return false;
             }
         }
@@ -208,7 +215,8 @@ namespace Core.SceneEntities
             {
                 if (!triggers.TryGetValue(triggerId, out TriggerState trigger))
                 {
-                    Debug.LogWarning($"StrangeLandLogger: Trigger '{triggerId}' not registered. Call RegisterTrigger first.");
+                    Debug.LogWarning(
+                        $"StrangeLandLogger: Trigger '{triggerId}' not registered. Call RegisterTrigger first.");
                     return;
                 }
 
@@ -226,7 +234,8 @@ namespace Core.SceneEntities
             {
                 if (!triggers.TryGetValue(triggerId, out TriggerState trigger))
                 {
-                    Debug.LogWarning($"StrangeLandLogger: Trigger '{triggerId}' not registered. Call RegisterTrigger first.");
+                    Debug.LogWarning(
+                        $"StrangeLandLogger: Trigger '{triggerId}' not registered. Call RegisterTrigger first.");
                     return;
                 }
 
@@ -262,7 +271,8 @@ namespace Core.SceneEntities
                 }
                 else
                 {
-                    Debug.LogWarning($"StrangeLandLogger: TriggerEnd called for '{triggerId}' without matching TriggerStart");
+                    Debug.LogWarning(
+                        $"StrangeLandLogger: TriggerEnd called for '{triggerId}' without matching TriggerStart");
                 }
             }
         }
@@ -278,6 +288,7 @@ namespace Core.SceneEntities
                 {
                     return trigger.IsActive;
                 }
+
                 return false;
             }
         }
@@ -286,11 +297,19 @@ namespace Core.SceneEntities
         {
             try
             {
-                if (logStream != null)
+                if (continuesLogStream != null)
                 {
-                    lock (logStream)
+                    lock (continuesLogStream)
                     {
-                        logStream.Flush();
+                        continuesLogStream.Flush();
+                    }
+                }
+
+                if (eventLogStream != null)
+                {
+                    lock (eventLogStream)
+                    {
+                        eventLogStream.Flush();
                     }
                 }
             }
@@ -351,13 +370,18 @@ namespace Core.SceneEntities
             var basePath = GlobalConfig.GetDataStoragePath();
             var folderpath = Path.Combine(basePath, "Logs");
             Directory.CreateDirectory(folderpath);
-            path = Path.Combine(folderpath, $"CSV_Scenario-{ScenarioName}_Session-{sessionName}_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            continuesPath = Path.Combine(folderpath,
+                $"CSV_Scenario-{ScenarioName}_Session-{sessionName}_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            eventPath = Path.Combine(folderpath,
+                $"EVENT_Scenario-{ScenarioName}_Session-{sessionName}_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
             InitLogs();
+            eventLogStream.WriteLine($"GameTime{sep}ScenarioTime{sep}Frame{sep}Event");
+            
             recordedGameObjects.Clear();
             hasLoggedRecordingStart = false;
 
             BuildLogItems();
-           
+
             var headerRow = "";
             foreach (var item in logItems)
                 headerRow += item.GetJsonPropertyName() + sep;
@@ -366,9 +390,14 @@ namespace Core.SceneEntities
             isSending = true;
             send = new Thread(ContinuousDataSend);
             send.Start();
-            Debug.Log($"Started Recording to file: {path}");
+            Debug.Log($"Started Recording to file: {continuesPath}");
             ScenarioStartTime = Time.time;
             RECORDING = true;
+
+
+            ///Event Logger
+            
+            LogEvent($"Recording Started {Time.frameCount}");
         }
 
         private void BuildLogItems()
@@ -380,14 +409,16 @@ namespace Core.SceneEntities
                 new LogItem(null, (refobj) => Time.smoothDeltaTime.ToString(Fpres), "DeltaTime"),
                 new LogItem(null, (refobj) => Time.frameCount.ToString(), "FrameCount")
             };
-           
-            StrangeLandTransform[] strangeLandObjects = FindObjectsByType<StrangeLandTransform>(sortMode: FindObjectsSortMode.None);
+
+            StrangeLandTransform[] strangeLandObjects =
+                FindObjectsByType<StrangeLandTransform>(sortMode: FindObjectsSortMode.None);
             foreach (var slt in strangeLandObjects)
             {
                 ParticipantOrder PO;
                 string parentName;
                 FindClosestParentDisplayOrInteractable(slt.transform, out PO, out parentName);
-                string finalNameForLog = !string.IsNullOrEmpty(slt.OverrideName) ? slt.OverrideName : slt.gameObject.name;
+                string finalNameForLog =
+                    !string.IsNullOrEmpty(slt.OverrideName) ? slt.OverrideName : slt.gameObject.name;
                 string labelPrefix = PO.ToString() + "_" + finalNameForLog;
 
                 recordedGameObjects.Add(slt.gameObject.name);
@@ -396,15 +427,18 @@ namespace Core.SceneEntities
                 {
                     logItems.Add(new LogItem(slt.gameObject, PositionLog, labelPrefix + "_Pos"));
                 }
+
                 if (slt.LogRotation)
                 {
                     logItems.Add(new LogItem(slt.gameObject, OrientationLog, labelPrefix + "_Rot"));
                 }
+
                 if (slt.LogScale)
                 {
                     logItems.Add(new LogItem(slt.gameObject, ScaleLog, labelPrefix + "_Scale"));
                 }
             }
+
             var varLogs = FindObjectsByType<StrangeLandVarLog>(FindObjectsSortMode.None);
 
             foreach (var vl in varLogs)
@@ -446,7 +480,7 @@ namespace Core.SceneEntities
         private void RebuildLogItems()
         {
             BuildLogItems();
-           
+
             var headerRow = "";
             foreach (var item in logItems)
                 headerRow += item.GetJsonPropertyName() + sep;
@@ -463,8 +497,10 @@ namespace Core.SceneEntities
                     {
                         trigger.IsActive = false;
                     }
+
                     return "1";
                 }
+
                 return "0";
             }
         }
@@ -475,15 +511,30 @@ namespace Core.SceneEntities
             if (!isRecording()) return;
 
             isSending = false;
-
+            send?.Join();
             string data;
             while (databuffer.TryDequeue(out data))
             {
                 try
                 {
-                    if (logStream != null)
+                    if (continuesLogStream != null)
                     {
-                        logStream.Write(data);
+                        continuesLogStream.Write(data);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"Error writing log data: {e}");
+                }
+            }
+
+            while (eventbuffer.TryDequeue(out data))
+            {
+                try
+                {
+                    if (eventLogStream != null)
+                    {
+                        eventLogStream.Write(data);
                     }
                 }
                 catch (Exception e)
@@ -502,6 +553,7 @@ namespace Core.SceneEntities
                     LogRecordedObjects(false);
                 }
             }
+
             doneSending = true;
         }
 
@@ -512,12 +564,12 @@ namespace Core.SceneEntities
             StringBuilder sb = new StringBuilder();
             if (isStart)
             {
-                sb.AppendLine($"Started recording to: {path}");
+                sb.AppendLine($"Started recording to: {continuesPath}");
                 sb.AppendLine($"Recording {recordedGameObjects.Count} GameObjects:");
             }
             else
             {
-                sb.AppendLine($"Finished recording to: {path}");
+                sb.AppendLine($"Finished recording to: {continuesPath}");
                 sb.AppendLine($"Recorded {recordedGameObjects.Count} GameObjects:");
             }
 
@@ -525,7 +577,7 @@ namespace Core.SceneEntities
             {
                 sb.AppendLine($"- {objName}");
             }
-           
+
             lock (triggerLock)
             {
                 if (triggers.Count > 0)
@@ -551,24 +603,68 @@ namespace Core.SceneEntities
             databuffer.Enqueue(data);
         }
 
+
+        private void EnqueueEvent(string evt)
+        {
+            if (!RECORDING) return;
+            
+            evt = Sanitize(evt);
+            
+            var line =
+                $"{Time.time.ToString(Fpres)}{sep}" +
+                $"{(Time.time - ScenarioStartTime).ToString(Fpres)}{sep}" +
+                $"{Time.frameCount}{sep}" +
+                $"{evt}\n";
+            eventbuffer.Enqueue(line);
+        }
+        private string Sanitize(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+
+            return s
+                .Replace("\r", "\\r")
+                .Replace("\n", "\\n")
+                .Replace(sep.ToString(), $"\\{sep}");
+        }
+        
+        public void LogEvent(string evt)
+        {
+            EnqueueEvent(evt);
+        }
+
         private void InitLogs()
         {
-            logStream = File.AppendText(path);
+            continuesLogStream = File.AppendText(continuesPath);
+            eventLogStream = File.AppendText(eventPath);
         }
 
         private void CloseLogs()
         {
-            if (logStream != null)
+            if (continuesLogStream != null)
             {
                 try
                 {
-                    logStream.Flush();
-                    logStream.Close();
-                    logStream = null;
+                    continuesLogStream.Flush();
+                    continuesLogStream.Close();
+                    continuesLogStream = null;
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError($"Error closing log stream: {e}");
+                    Debug.LogError($"Error closing continuesLogStream : {e}");
+                }
+            }
+
+            if (eventLogStream != null)
+            {
+                try
+                {
+                    eventLogStream.Flush();
+                    eventLogStream.Close();
+                    eventLogStream = null;
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"Error closing eventLogStream : {e}");
                 }
             }
         }
@@ -579,11 +675,18 @@ namespace Core.SceneEntities
             {
                 while (databuffer.TryDequeue(out var dat))
                     DataSend(dat);
+
+                while (eventbuffer.TryDequeue(out var ev))
+                    EventSend(ev);
+
                 Thread.Sleep(100);
             }
 
             while (databuffer.TryDequeue(out var finalDat))
                 DataSend(finalDat);
+
+            while (eventbuffer.TryDequeue(out var ev))
+                EventSend(ev);
 
             doneSending = true;
         }
@@ -592,19 +695,38 @@ namespace Core.SceneEntities
         {
             try
             {
-                if (logStream != null)
+                if (continuesLogStream != null)
                 {
-                    lock (logStream)
+                    lock (continuesLogStream)
                     {
-                        logStream.Write(data);
+                        continuesLogStream.Write(data);
                     }
                 }
             }
             catch (Exception e)
             {
-                Debug.LogError("Error writing log data: " + e);
+                Debug.LogError("Error writing continuesLogStream: " + e);
             }
         }
+
+        private void EventSend(string data)
+        {
+            try
+            {
+                if (eventLogStream != null)
+                {
+                    lock (eventLogStream)
+                    {
+                        eventLogStream.Write(data);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Error writing eventLogStream: " + e);
+            }
+        }
+
 
         private string PositionLog(GameObject o)
         {
@@ -666,7 +788,8 @@ namespace Core.SceneEntities
             }
         }
 
-        private void FindClosestParentDisplayOrInteractable(Transform child, out ParticipantOrder pOrder, out string parentName)
+        private void FindClosestParentDisplayOrInteractable(Transform child, out ParticipantOrder pOrder,
+            out string parentName)
         {
             pOrder = ParticipantOrder.None;
             parentName = "None";
@@ -680,6 +803,7 @@ namespace Core.SceneEntities
                     parentName = cd.gameObject.name;
                     return;
                 }
+
                 var io = current.GetComponent<InteractableObject>();
                 if (io != null)
                 {
@@ -687,6 +811,7 @@ namespace Core.SceneEntities
                     parentName = io.gameObject.name;
                     return;
                 }
+
                 current = current.parent;
             }
         }
@@ -696,22 +821,27 @@ namespace Core.SceneEntities
             private GameObject reference;
             private Func<GameObject, string> logProducer;
             private string jsonPropertyName;
+
             public LogItem(GameObject reference, Func<GameObject, string> logProducer, string jsonPropertyName)
             {
                 this.reference = reference;
                 this.logProducer = logProducer;
                 this.jsonPropertyName = jsonPropertyName;
             }
+
             public string Serialize()
             {
                 return logProducer(reference);
             }
+
             public string GetJsonPropertyName()
             {
                 return jsonPropertyName;
             }
         }
-         private static bool TryMakeFastGetter(Component target, string memberName, string fPres, out Func<string> getter)
+
+        private static bool TryMakeFastGetter(Component target, string memberName, string fPres,
+            out Func<string> getter)
         {
             getter = null;
             if (target == null || string.IsNullOrEmpty(memberName)) return false;
@@ -747,7 +877,8 @@ namespace Core.SceneEntities
 
             if (valueType == typeof(float))
             {
-                var toStr = typeof(float).GetMethod(nameof(float.ToString), new[] { typeof(string), typeof(IFormatProvider) });
+                var toStr = typeof(float).GetMethod(nameof(float.ToString),
+                    new[] { typeof(string), typeof(IFormatProvider) });
                 var fmt = Expression.Constant(fPres);
                 var inv = Expression.Constant(CultureInfo.InvariantCulture, typeof(IFormatProvider));
                 getter = Expression.Lambda<Func<string>>(Expression.Call(access, toStr, fmt, inv)).Compile();
