@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: "If you use StrangeLand in your research, please cite the paper below."
+title: "StrangeLand"
+type: software
+license: MIT
+repository-code: "https://github.com/Strange-Land/StrangeLandPackage"
+url: "https://strangeland.io"
+authors:
+  - given-names: David
+    family-names: Goedicke
+  - given-names: Wendy
+    family-names: Ju
+preferred-citation:
+  type: article
+  title: "Strangers in a Strange Land: New Experimental System for Understanding Driving Culture Using VR"
+  authors:
+    - given-names: David
+      family-names: Goedicke
+    - given-names: Carmel
+      family-names: Zolkov
+    - given-names: Natalie
+      family-names: Friedman
+    - given-names: Talia
+      family-names: Wise
+    - given-names: Avi
+      family-names: Parush
+    - given-names: Wendy
+      family-names: Ju
+  journal: "IEEE Transactions on Vehicular Technology"
+  volume: 71
+  issue: 4
+  start: 3399
+  end: 3413
+  year: 2022
+  doi: "10.1109/TVT.2022.3152611"
